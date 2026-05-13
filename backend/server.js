@@ -13,7 +13,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://notenestapp-7hhn.onrender.com/api",
+  "https://note-nestapp.vercel.app",
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
