@@ -11,27 +11,32 @@ const OTP_EXPIRES_MS = () =>
 
 // ─── STEP 1: Register — send OTP ─────────────────────────────────────────────
 // POST /api/auth/register
+// ─── STEP 1: Register — send OTP ─────────────────────────────────────────────
+// POST /api/auth/register
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password)
+    
+    if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
 
     // Block if already verified
     const existing = await User.findOne({ email });
-    if (existing && existing.isVerified)
+    if (existing && existing.isVerified) {
       return res.status(409).json({ message: "Email already in use" });
+    }
 
-    // Create/update unverified user (allow re-registration if not yet verified)
+    // Create/update unverified user
     if (!existing) {
       await User.create({ name, email, password, isVerified: false });
     } else {
       existing.name = name;
-      existing.password = password; // will be re-hashed by pre-save hook
+      existing.password = password;
       await existing.save();
     }
 
-    // Delete any existing OTP for this email
+    // Delete existing OTP
     await Otp.deleteMany({ email, type: "verify_email" });
 
     const { otp, otpHash } = Otp.generate();
@@ -45,14 +50,20 @@ export const register = async (req, res) => {
 
     await sendOTPEmail({ to: email, name, otp, type: "verify" });
 
-    res.status(200).json({ message: "OTP sent to your email", email });
+    // ✅ CORRECT RESPONSE
+    return res.status(200).json({ 
+      message: "OTP sent to your email",
+      email,
+      success: true 
+    });
+
   } catch (err) {
+    console.error("Register error:", err);
     if (err.name === "ValidationError") {
       const messages = Object.values(err.errors).map((e) => e.message);
       return res.status(400).json({ message: messages.join(", ") });
     }
-    console.error(err);
-    res.status(500).json({ message: "Registration failed" });
+    return res.status(500).json({ message: "Registration failed" });
   }
 };
 
